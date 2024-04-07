@@ -5,31 +5,29 @@ struct PhysicalVector {
     z: f64,
 }
 
-#[derive(Debug)]
-struct Position {
-    position: PhysicalVector,
-}
-
-#[derive(Debug)]
-struct Velocity {
-    velocity: PhysicalVector,
+impl PhysicalVector {
+    fn add(&mut self, other: &PhysicalVector) {
+        self.x = self.x + other.x;
+        self.y = self.y + other.y;
+        self.z = self.z + other.z;
+    }
 }
 
 #[derive(Debug)]
 struct Particle {
-    position: Position,
-    velocity: Velocity,
+    position: PhysicalVector,
+    velocity: PhysicalVector,
 }
 
 fn main() {
-    let stone = Particle {
-        position: Position {
-            position: PhysicalVector {x: 0., y: 0., z: 0.},
-        },
-        velocity: Velocity {
-            velocity: PhysicalVector {x: 0., y: 0., z: 1.},
-        }
+    let mut stone = Particle {
+        position: PhysicalVector {x: 0., y: 0., z: 0.},
+        velocity: PhysicalVector {x: 0., y: 0., z: 1.},
     };
+    
+    dbg!(&stone);
+    
+    stone.position.add(&PhysicalVector{x: 1., y: 0., z: 0.});
     
     dbg!(&stone);
 }
