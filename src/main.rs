@@ -35,6 +35,13 @@ impl <'a> Interaction<'a> {
 	}
 }
 
+/// Represents a system of particles, i.e. a collection of particles that interact.
+#[derive(Debug)]
+struct ParticlesSystem<'a> {
+	particles: Vec::<&'a Particle>,
+	interactions: Vec::<&'a Interaction<'a>>,
+}
+
 fn main() {
     let mut a = Particle {
         position: Vector3D::<f64,Position>::new(-1.,0.,0.),
@@ -65,9 +72,9 @@ fn main() {
 		particle_2: &c,
 	};
 	
-	dbg!(interaction_ac.force_acting_on_particle_1());
-	dbg!(interaction_ac.force_acting_on_particle_2());
-	
-	let particles = vec![&a,&b];
-	let interactions = vec![&interaction_ab, &interaction_ac, &interaction_bc];
+	let system = ParticlesSystem{
+		particles: vec![&a,&b,&c],
+		interactions: vec![&interaction_ab, &interaction_ac, &interaction_bc],
+	};
+	dbg!(system);
 }
