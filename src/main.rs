@@ -4,6 +4,8 @@ use euclid::Vector3D;
 enum Position {}
 /// Defines units of velocity.
 enum Velocity {}
+/// Defines units of acceleration;
+enum Acceleration {}
 /// Defines units of force.
 enum Force {}
 
@@ -12,6 +14,7 @@ enum Force {}
 struct Particle {
     position: Vector3D::<f64, Position>,
     velocity: Vector3D::<f64, Velocity>,
+    acceleration: Vector3D::<f64, Acceleration>,
     mass: f64,
 }
 
@@ -46,16 +49,19 @@ fn main() {
     let mut a = Particle {
         position: Vector3D::<f64,Position>::new(-1.,0.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        acceleration: Vector3D::<f64,Acceleration>::new(0.,0.,0.),
         mass: 1.,
     };
     let mut b = Particle {
         position: Vector3D::<f64,Position>::new(1.,0.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        acceleration: Vector3D::<f64,Acceleration>::new(0.,0.,0.),
         mass: 2.,
     };
     let mut c = Particle {
         position: Vector3D::<f64,Position>::new(0.,1.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        acceleration: Vector3D::<f64,Acceleration>::new(0.,0.,0.),
         mass: 2.,
     };
     
