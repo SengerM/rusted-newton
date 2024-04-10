@@ -1,9 +1,13 @@
 use euclid::Vector3D;
 
-enum Position {} // Defines units of position.
-enum Velocity {} // Defines units of velocity.
-enum Force {} // Defines units of force.
+/// Defines units of position.
+enum Position {}
+/// Defines units of velocity.
+enum Velocity {}
+/// Defines units of force.
+enum Force {}
 
+/// Represents the concept of a particle in classical mechanics.
 #[derive(Debug)]
 struct Particle {
     position: Vector3D::<f64, Position>,
@@ -11,6 +15,7 @@ struct Particle {
     mass: f64,
 }
 
+/// Represents an interaction between two particles, which will lead to a force.
 #[derive(Debug)]
 struct Interaction<'a> {
 	particle_1: &'a Particle,
@@ -18,11 +23,13 @@ struct Interaction<'a> {
 }
 
 impl <'a> Interaction<'a> {
+	/// Computes the force acting on `particle_1` due to this interaction.
 	fn force_acting_on_particle_1(&self) -> Vector3D<f64,Force> {
 		let a = self.particle_1.position;
 		let b = self.particle_2.position;
 		Vector3D::<f64,Force>::new(b.x-a.x, b.y-a.y, b.z-a.z).normalize()
 	}
+	/// Computes the force acting on `particle_2` due to this interaction.
 	fn force_acting_on_particle_2(&self) -> Vector3D<f64,Force> {
 		self.force_acting_on_particle_1() * -1.
 	}
