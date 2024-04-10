@@ -17,6 +17,17 @@ struct Interaction<'a> {
 	particle_2: &'a Particle,
 }
 
+impl <'a> Interaction<'a> {
+	fn force_acting_on_particle_1(&self) -> Vector3D<f64,Force> {
+		let a = self.particle_1.position;
+		let b = self.particle_2.position;
+		Vector3D::<f64,Force>::new(b.x-a.x, b.y-a.y, b.z-a.z).normalize()
+	}
+	fn force_acting_on_particle_2(&self) -> Vector3D<f64,Force> {
+		self.force_acting_on_particle_1() * -1.
+	}
+}
+
 fn main() {
     let mut a = Particle {
         position: Vector3D::<f64,Position>::new(-1.,0.,0.),
@@ -47,6 +58,8 @@ fn main() {
 		particle_2: &c,
 	};
 	
+	dbg!(interaction_ac.force_acting_on_particle_1());
+	dbg!(interaction_ac.force_acting_on_particle_2());
 	
 	let particles = vec![&a,&b];
 	let interactions = vec![&interaction_ab, &interaction_ac, &interaction_bc];
