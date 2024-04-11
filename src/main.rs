@@ -159,7 +159,11 @@ fn main() {
     system.add_interaction(1,2);
 
     let connection = system.create_sqlite_connection();
-    system.dump_to_sqlite(&connection);
-    system.advance_time(1.);
-    system.dump_to_sqlite(&connection);
+    system.dump_to_sqlite(&connection); // Save initial state.
+    for n_time in 1..999999 {
+        system.advance_time(0.00001);
+        if n_time % 999 == 0 {
+            system.dump_to_sqlite(&connection);
+        }
+    }
 }
