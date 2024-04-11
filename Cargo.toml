@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 euclid = "0.22.9"
+sqlite = "0.34.0"

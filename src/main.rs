@@ -1,4 +1,5 @@
 use euclid::Vector3D;
+use sqlite;
 
 /// Defines units of position.
 enum Position {}
@@ -45,6 +46,8 @@ impl Interaction {
 struct ParticlesSystem {
     particles: Vec<Particle>,
     interactions: Vec<Interaction>,
+    time: f64,
+    n_time_saved_to_sql: usize,
 }
 
 impl ParticlesSystem {
@@ -53,6 +56,8 @@ impl ParticlesSystem {
         Self {
             particles: Vec::<Particle>::new(),
             interactions: Vec::<Interaction>::new(),
+            time: 0.,
+            n_time_saved_to_sql: 0,
         }
     }
     /// Add a particle to the system.
@@ -71,7 +76,7 @@ impl ParticlesSystem {
         let mut accelerations = vec![Vector3D::<f64,Acceleration>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
         for interaction in &self.interactions {
             accelerations[interaction.particle_1_idx] += interaction.force_acting_on_particle_1(&self.particles).cast_unit()/self.particles[interaction.particle_1_idx].mass;
-            accelerations[interaction.particle_2_idx] += interaction.force_acting_on_particle_1(&self.particles).cast_unit()/self.particles[interaction.particle_2_idx].mass;
+            accelerations[interaction.particle_2_idx] += interaction.force_acting_on_particle_2(&self.particles).cast_unit()/self.particles[interaction.particle_2_idx].mass;
         }
         // Now we move the system forward in time:
         for (n_particle,p) in self.particles.iter_mut().enumerate() {
@@ -81,25 +86,68 @@ impl ParticlesSystem {
             p.position = p.position + dr;
             p.velocity = p.velocity + dv;
         }
+        self.time += time_step;
 	}
+    /// Creates an SQLite file to save the data.
+    fn create_sqlite_connection(&self) -> sqlite::Connection {
+        let connection = sqlite::open("/home/msenger/Desktop/newton.db").unwrap();
+        connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+        connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
+        connection
+    }
+    /// Save the state of the system into an SQLite file.
+    fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
+        for (n_particle,p) in self.particles.iter().enumerate() {
+            let mut query = String::new();
+            query.push_str("INSERT INTO particles_system VALUES (");
+            query.push_str(&self.n_time_saved_to_sql.to_string());
+            query.push_str(", ");
+            query.push_str(&n_particle.to_string());
+            query.push_str(", ");
+            query.push_str(&p.position.x.to_string());
+            query.push_str(", ");
+            query.push_str(&p.position.y.to_string());
+            query.push_str(", ");
+            query.push_str(&p.position.z.to_string());
+            query.push_str(", ");
+            query.push_str(&p.velocity.x.to_string());
+            query.push_str(", ");
+            query.push_str(&p.velocity.y.to_string());
+            query.push_str(", ");
+            query.push_str(&p.velocity.z.to_string());
+            query.push_str(", ");
+            query.push_str(&p.mass.to_string());
+            query.push_str(");");
+            connection.execute(query).unwrap();
+        }
+        let mut query = String::new();
+        query.push_str("INSERT INTO time VALUES (");
+        query.push_str(&self.n_time_saved_to_sql.to_string());
+        query.push_str(", ");
+        query.push_str(&self.time.to_string());
+        query.push_str(");");
+        connection.execute(query).unwrap();
+
+        self.n_time_saved_to_sql += 1;
+    }
 }
 
 fn main() {
 	let mut system = ParticlesSystem::new();
     
-    let mut p = Particle {
+    let p = Particle {
         position: Vector3D::<f64,Position>::new(-1.,0.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
         mass: 1.,
     };
     system.add_particle(p);
-    let mut p = Particle {
+    let p = Particle {
         position: Vector3D::<f64,Position>::new(1.,0.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
         mass: 2.,
     };
     system.add_particle(p);
-    let mut p = Particle {
+    let p = Particle {
         position: Vector3D::<f64,Position>::new(0.,1.,0.),
         velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
         mass: 3.,
@@ -109,8 +157,9 @@ fn main() {
     system.add_interaction(0,1);
     system.add_interaction(0,2);
     system.add_interaction(1,2);
-	
-	dbg!(&system);
+
+    let connection = system.create_sqlite_connection();
+    system.dump_to_sqlite(&connection);
     system.advance_time(1.);
-    dbg!(&system);
+    system.dump_to_sqlite(&connection);
 }
