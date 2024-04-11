@@ -89,8 +89,8 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    fn create_sqlite_connection(&self) -> sqlite::Connection {
-        let connection = sqlite::open("/home/msenger/Desktop/newton.db").unwrap();
+    fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
+        let connection = sqlite::open(file_name).unwrap();
         connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
         connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
         connection
@@ -153,12 +153,18 @@ fn main() {
         mass: 3.,
     };
     system.add_particle(p);
+    let p = Particle {
+        position: Vector3D::<f64,Position>::new(0.,-1.,0.),
+        velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        mass: 4.,
+    };
+    system.add_particle(p);
     
     system.add_interaction(0,1);
-    system.add_interaction(0,2);
     system.add_interaction(1,2);
+    system.add_interaction(2,3);
 
-    let connection = system.create_sqlite_connection();
+    let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(&connection); // Save initial state.
     for n_time in 1..999999 {
         system.advance_time(0.00001);
