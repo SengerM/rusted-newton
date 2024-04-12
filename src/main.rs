@@ -12,7 +12,6 @@ enum ForceU {}
 type MassU = f64;
 
 /// Represents the concept of a particle in classical mechanics.
-#[derive(Debug)]
 struct Particle {
     position: Vector3D::<f64, PositionU>,
     velocity: Vector3D::<f64, VelocityU>,
@@ -22,27 +21,36 @@ struct Particle {
 type ParticleIdx = usize;
 
 /// Represents an interaction between two particles, which will lead to a force.
-#[derive(Debug)]
 struct Interaction {
-    particle_1_idx: ParticleIdx,
-    particle_2_idx: ParticleIdx,
+    particle_a_idx: ParticleIdx,
+    particle_b_idx: ParticleIdx,
+    force: Force,
 }
 
-impl Interaction {
+/// Represents a force.
+enum Force {
+    Elastic(f64, f64),
+    Damping(f64),
+    Gravitational,
+}
+
+impl Force {
     /// Computes the force acting on `particle_1` due to this interaction.
-    fn force_acting_on_particle_1(&self, particles: &[Particle]) -> Vector3D<f64, ForceU> {
-        let a = particles[self.particle_1_idx].position;
-        let b = particles[self.particle_2_idx].position;
-        Vector3D::<f64, ForceU>::new(b.x - a.x, b.y - a.y, b.z - a.z).normalize()
+    fn force_acting_on_a(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+        let r = b.position-a.position;
+        match self {
+            Force::Elastic(k, d0) => (r.normalize()*(r.length() - (*d0))*(*k)).cast_unit(),
+            Force::Damping(c) => (r.normalize()*((b.velocity-a.velocity).dot(r.cast_unit())*(*c))).cast_unit(),
+            Force::Gravitational => (r.normalize()*a.mass*b.mass/r.square_length()).cast_unit(),
+        }
     }
     /// Computes the force acting on `particle_2` due to this interaction.
-    fn force_acting_on_particle_2(&self, particles: &[Particle]) -> Vector3D<f64, ForceU> {
-        self.force_acting_on_particle_1(particles) * -1.
+    fn force_acting_on_b(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+        self.force_acting_on_a(a, b) * -1.
     }
 }
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
-#[derive(Debug)]
 struct ParticlesSystem {
     particles: Vec<Particle>,
     interactions: Vec<Interaction>,
@@ -66,8 +74,7 @@ impl ParticlesSystem {
         self.particles.len()
     }
     /// Add an interaction between two particles of the system.
-    fn add_interaction(&mut self, p_id_a: ParticleIdx, p_id_b: ParticleIdx) {
-        let interaction = Interaction { particle_1_idx: p_id_a, particle_2_idx: p_id_b };
+    fn add_interaction(&mut self, interaction: Interaction) {
         self.interactions.push(interaction);
     }
     /// Advance the time and update the system.
@@ -75,8 +82,10 @@ impl ParticlesSystem {
         // First we compute the acceleration of each particle using the interactions:
         let mut accelerations = vec![Vector3D::<f64,AccelerationU>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
         for interaction in &self.interactions {
-            accelerations[interaction.particle_1_idx] += interaction.force_acting_on_particle_1(&self.particles).cast_unit()/self.particles[interaction.particle_1_idx].mass;
-            accelerations[interaction.particle_2_idx] += interaction.force_acting_on_particle_2(&self.particles).cast_unit()/self.particles[interaction.particle_2_idx].mass;
+            let a = &self.particles[interaction.particle_a_idx];
+            let b = &self.particles[interaction.particle_b_idx];
+            accelerations[interaction.particle_a_idx] += interaction.force.force_acting_on_a(a,b).cast_unit()/a.mass;
+            accelerations[interaction.particle_b_idx] += interaction.force.force_acting_on_b(a,b).cast_unit()/b.mass;
         }
         // Now we move the system forward in time:
         for (n_particle,p) in self.particles.iter_mut().enumerate() {
@@ -135,34 +144,94 @@ impl ParticlesSystem {
 fn main() {
 	let mut system = ParticlesSystem::new();
     
-    let p = Particle {
-        position: Vector3D::<f64,PositionU>::new(-1.,0.,0.),
-        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
-        mass: 1.,
-    };
-    system.add_particle(p);
-    let p = Particle {
-        position: Vector3D::<f64,PositionU>::new(1.,0.,0.),
-        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
-        mass: 2.,
-    };
-    system.add_particle(p);
-    let p = Particle {
-        position: Vector3D::<f64,PositionU>::new(0.,1.,0.),
-        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
-        mass: 3.,
-    };
-    system.add_particle(p);
-    let p = Particle {
-        position: Vector3D::<f64,PositionU>::new(0.,-1.,0.),
-        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
-        mass: 4.,
-    };
-    system.add_particle(p);
+    system.add_particle(
+        Particle {
+            position: Vector3D::<f64,PositionU>::new(1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(0.,1.,0.).normalize(),
+            mass: 1.,
+        }
+    );
+    system.add_particle(
+        Particle {
+            position: Vector3D::<f64,PositionU>::new(0.,1.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(-1.,0.,0.).normalize(),
+            mass: 1.,
+        }
+    );
+    system.add_particle(
+        Particle {
+            position: Vector3D::<f64,PositionU>::new(-1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(0.,-1.,0.).normalize(),
+            mass: 1.,
+        }
+    );
+    system.add_particle(
+        Particle {
+            position: Vector3D::<f64,PositionU>::new(0.,-1.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(1.,0.,0.).normalize(),
+            mass: 1.,
+        }
+    );
     
-    system.add_interaction(0,1);
-    system.add_interaction(1,2);
-    system.add_interaction(2,3);
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 0,
+            particle_b_idx: 1,
+            force: Force::Elastic(2.,0.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 1,
+            particle_b_idx: 2,
+            force: Force::Elastic(1.,0.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 2,
+            particle_b_idx: 3,
+            force: Force::Elastic(2.,0.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 3,
+            particle_b_idx: 0,
+            force: Force::Elastic(1.,0.),
+        }
+    );
+
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 0,
+            particle_b_idx: 1,
+            force: Force::Damping(1.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 1,
+            particle_b_idx: 2,
+            force: Force::Damping(1.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 2,
+            particle_b_idx: 3,
+            force: Force::Damping(1.),
+        }
+    );
+    system.add_interaction(
+        Interaction {
+            particle_a_idx: 3,
+            particle_b_idx: 0,
+            force: Force::Damping(1.),
+        }
+    );
+
+    
 
     let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(&connection); // Save initial state.
