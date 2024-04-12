@@ -2,21 +2,21 @@ use euclid::Vector3D;
 use sqlite;
 
 /// Defines units of position.
-enum Position {}
+enum PositionU {}
 /// Defines units of velocity.
-enum Velocity {}
+enum VelocityU {}
 /// Defines units of acceleration;
-enum Acceleration {}
-enum Force {}
+enum AccelerationU {}
+enum ForceU {}
 /// Defines units of mass.
-type Mass = f64;
+type MassU = f64;
 
 /// Represents the concept of a particle in classical mechanics.
 #[derive(Debug)]
 struct Particle {
-    position: Vector3D::<f64, Position>,
-    velocity: Vector3D::<f64, Velocity>,
-    mass: Mass,
+    position: Vector3D::<f64, PositionU>,
+    velocity: Vector3D::<f64, VelocityU>,
+    mass: MassU,
 }
 
 type ParticleIdx = usize;
@@ -30,13 +30,13 @@ struct Interaction {
 
 impl Interaction {
     /// Computes the force acting on `particle_1` due to this interaction.
-    fn force_acting_on_particle_1(&self, particles: &[Particle]) -> Vector3D<f64, Force> {
+    fn force_acting_on_particle_1(&self, particles: &[Particle]) -> Vector3D<f64, ForceU> {
         let a = particles[self.particle_1_idx].position;
         let b = particles[self.particle_2_idx].position;
-        Vector3D::<f64, Force>::new(b.x - a.x, b.y - a.y, b.z - a.z).normalize()
+        Vector3D::<f64, ForceU>::new(b.x - a.x, b.y - a.y, b.z - a.z).normalize()
     }
     /// Computes the force acting on `particle_2` due to this interaction.
-    fn force_acting_on_particle_2(&self, particles: &[Particle]) -> Vector3D<f64, Force> {
+    fn force_acting_on_particle_2(&self, particles: &[Particle]) -> Vector3D<f64, ForceU> {
         self.force_acting_on_particle_1(particles) * -1.
     }
 }
@@ -73,7 +73,7 @@ impl ParticlesSystem {
     /// Advance the time and update the system.
     fn advance_time(&mut self, time_step: f64) {
         // First we compute the acceleration of each particle using the interactions:
-        let mut accelerations = vec![Vector3D::<f64,Acceleration>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
+        let mut accelerations = vec![Vector3D::<f64,AccelerationU>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
         for interaction in &self.interactions {
             accelerations[interaction.particle_1_idx] += interaction.force_acting_on_particle_1(&self.particles).cast_unit()/self.particles[interaction.particle_1_idx].mass;
             accelerations[interaction.particle_2_idx] += interaction.force_acting_on_particle_2(&self.particles).cast_unit()/self.particles[interaction.particle_2_idx].mass;
@@ -81,8 +81,8 @@ impl ParticlesSystem {
         // Now we move the system forward in time:
         for (n_particle,p) in self.particles.iter_mut().enumerate() {
             let a = accelerations[n_particle];
-            let dv: Vector3D::<f64,Velocity> = a.cast_unit()*time_step;
-            let dr: Vector3D::<f64,Position> = p.velocity.cast_unit()*time_step + dv.cast_unit()*time_step/2.;
+            let dv: Vector3D::<f64,VelocityU> = a.cast_unit()*time_step;
+            let dr: Vector3D::<f64,PositionU> = p.velocity.cast_unit()*time_step + dv.cast_unit()*time_step/2.;
             p.position = p.position + dr;
             p.velocity = p.velocity + dv;
         }
@@ -136,26 +136,26 @@ fn main() {
 	let mut system = ParticlesSystem::new();
     
     let p = Particle {
-        position: Vector3D::<f64,Position>::new(-1.,0.,0.),
-        velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        position: Vector3D::<f64,PositionU>::new(-1.,0.,0.),
+        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
         mass: 1.,
     };
     system.add_particle(p);
     let p = Particle {
-        position: Vector3D::<f64,Position>::new(1.,0.,0.),
-        velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        position: Vector3D::<f64,PositionU>::new(1.,0.,0.),
+        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
         mass: 2.,
     };
     system.add_particle(p);
     let p = Particle {
-        position: Vector3D::<f64,Position>::new(0.,1.,0.),
-        velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        position: Vector3D::<f64,PositionU>::new(0.,1.,0.),
+        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
         mass: 3.,
     };
     system.add_particle(p);
     let p = Particle {
-        position: Vector3D::<f64,Position>::new(0.,-1.,0.),
-        velocity: Vector3D::<f64,Velocity>::new(0.,0.,0.),
+        position: Vector3D::<f64,PositionU>::new(0.,-1.,0.),
+        velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
         mass: 4.,
     };
     system.add_particle(p);
@@ -166,9 +166,9 @@ fn main() {
 
     let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(&connection); // Save initial state.
-    for n_time in 1..999999 {
+    for n_time in 1..9999999 {
         system.advance_time(0.00001);
-        if n_time % 999 == 0 {
+        if n_time % 9999 == 0 {
             system.dump_to_sqlite(&connection);
         }
     }
