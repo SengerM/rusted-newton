@@ -21,10 +21,9 @@ struct Particle {
 type ParticleIdx = usize;
 
 /// Represents an interaction between two particles, which will lead to a force.
-struct Interaction {
-    particle_a_idx: ParticleIdx,
-    particle_b_idx: ParticleIdx,
-    force: Force,
+enum Interaction {
+    force_between_two_particles(ParticleIdx,ParticleIdx,Force),
+    external_force(ParticleIdx,ExternalForce),
 }
 
 /// Represents a force.
@@ -36,7 +35,7 @@ enum Force {
 
 impl Force {
     /// Computes the force acting on `particle_1` due to this interaction.
-    fn force_acting_on_a(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+    fn acting_on_a(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
         let r = b.position-a.position;
         match self {
             Force::Elastic(k, d0) => (r.normalize()*(r.length() - (*d0))*(*k)).cast_unit(),
@@ -45,10 +44,12 @@ impl Force {
         }
     }
     /// Computes the force acting on `particle_2` due to this interaction.
-    fn force_acting_on_b(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
-        self.force_acting_on_a(a, b) * -1.
+    fn acting_on_b(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+        self.acting_on_a(a, b) * -1.
     }
 }
+
+enum ExternalForce {}
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
 struct ParticlesSystem {
@@ -82,10 +83,15 @@ impl ParticlesSystem {
         // First we compute the acceleration of each particle using the interactions:
         let mut accelerations = vec![Vector3D::<f64,AccelerationU>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
         for interaction in &self.interactions {
-            let a = &self.particles[interaction.particle_a_idx];
-            let b = &self.particles[interaction.particle_b_idx];
-            accelerations[interaction.particle_a_idx] += interaction.force.force_acting_on_a(a,b).cast_unit()/a.mass;
-            accelerations[interaction.particle_b_idx] += interaction.force.force_acting_on_b(a,b).cast_unit()/b.mass;
+            match interaction {
+                Interaction::force_between_two_particles(idx_a, idx_b, force) => {
+                    let a = &self.particles[*idx_a];
+                    let b = &self.particles[*idx_b];
+                    accelerations[*idx_a] += force.acting_on_a(a,b).cast_unit()/a.mass;
+                    accelerations[*idx_b] += force.acting_on_b(a,b).cast_unit()/b.mass;
+                }
+                Interaction::external_force(idx,force) => panic!("External force not implemented!"),
+            }
         }
         // Now we move the system forward in time:
         for (n_particle,p) in self.particles.iter_mut().enumerate() {
@@ -174,68 +180,67 @@ fn main() {
     );
     
     system.add_interaction(
-        Interaction {
-            particle_a_idx: 0,
-            particle_b_idx: 1,
-            force: Force::Elastic(2.,0.),
-        }
+        Interaction::force_between_two_particles(
+            0,
+            1,
+            Force::Elastic(1.,0.),
+        )
     );
     system.add_interaction(
-        Interaction {
-            particle_a_idx: 1,
-            particle_b_idx: 2,
-            force: Force::Elastic(1.,0.),
-        }
+        Interaction::force_between_two_particles(
+            1,
+            2,
+            Force::Elastic(1.,0.),
+        )
     );
     system.add_interaction(
-        Interaction {
-            particle_a_idx: 2,
-            particle_b_idx: 3,
-            force: Force::Elastic(2.,0.),
-        }
+        Interaction::force_between_two_particles(
+            2,
+            3,
+            Force::Elastic(1.,0.),
+        )
     );
     system.add_interaction(
-        Interaction {
-            particle_a_idx: 3,
-            particle_b_idx: 0,
-            force: Force::Elastic(1.,0.),
-        }
+        Interaction::force_between_two_particles(
+            3,
+            0,
+            Force::Elastic(1.,0.),
+        )
     );
-
-    system.add_interaction(
-        Interaction {
-            particle_a_idx: 0,
-            particle_b_idx: 1,
-            force: Force::Damping(1.),
-        }
-    );
-    system.add_interaction(
-        Interaction {
-            particle_a_idx: 1,
-            particle_b_idx: 2,
-            force: Force::Damping(1.),
-        }
-    );
-    system.add_interaction(
-        Interaction {
-            particle_a_idx: 2,
-            particle_b_idx: 3,
-            force: Force::Damping(1.),
-        }
-    );
-    system.add_interaction(
-        Interaction {
-            particle_a_idx: 3,
-            particle_b_idx: 0,
-            force: Force::Damping(1.),
-        }
-    );
-
     
+    system.add_interaction(
+        Interaction::force_between_two_particles(
+            0,
+            1,
+            Force::Damping(0.5),
+        )
+    );
+    system.add_interaction(
+        Interaction::force_between_two_particles(
+            1,
+            2,
+            Force::Damping(0.5),
+        )
+    );
+    system.add_interaction(
+        Interaction::force_between_two_particles(
+            2,
+            3,
+            Force::Damping(0.5),
+        )
+    );
+    system.add_interaction(
+        Interaction::force_between_two_particles(
+            3,
+            0,
+            Force::Damping(0.5),
+        )
+    );
+
 
     let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(&connection); // Save initial state.
-    for n_time in 1..9999999 {
+    for n_time in 1..999999 {
         system.advance_time(0.00001);
         if n_time % 9999 == 0 {
             system.dump_to_sqlite(&connection);
