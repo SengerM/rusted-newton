@@ -62,22 +62,41 @@ impl ExternalForce {
     }
 }
 
-//~ /// Represents an infinite wall that divides space in two halves: 1) Outside the wall nad 2) Inside the wall.
-//~ struct InfiniteWall {
-    //~ position: Vector3d::<f64,PositionU>,
-    //~ orientation: Vector3d::<f64,PositionU>, // Points towards the outside of the wall.
-//~ }
+enum Constraint {
+    external_constraint(ParticleIdx,ExternalConstraint),
+}
 
-//~ enum ExternalConstraint {
-    //~ infinite_wall(InfiniteWall),
-//~ }
+/// Represents an infinite wall that divides space in two halves: 1) Outside the wall and 2) Inside the wall.
+struct InfiniteWall {
+    position: Vector3D::<f64,PositionU>,
+    orientation: Vector3D::<f64,PositionU>, // Points towards the outside of the wall.
+}
 
+enum ExternalConstraint {
+    infinite_wall(InfiniteWall),
+}
 
+impl ExternalConstraint {
+    fn compute_new_dynamical_variables(&self, a: &Particle) -> (Vector3D<f64,PositionU>, Vector3D<f64,VelocityU>) {
+        match self {
+            ExternalConstraint::infinite_wall(wall) => {
+                let d = (a.position - wall.position).dot(wall.orientation);
+                if d < 0. {
+                    let new_vel: Vector3D<f64,VelocityU> = a.velocity - (wall.orientation.normalize()*2.0*(a.velocity.dot(wall.orientation.normalize().cast_unit()))).cast_unit();
+                    (a.position, new_vel)
+                } else {
+                    (a.position, a.velocity)
+                }
+            }
+        }
+    }
+}
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
 struct ParticlesSystem {
     particles: Vec<Particle>,
     interactions: Vec<Interaction>,
+    constraints: Vec<Constraint>,
     time: f64,
     n_time_saved_to_sql: usize,
 }
@@ -88,6 +107,7 @@ impl ParticlesSystem {
         Self {
             particles: Vec::<Particle>::new(),
             interactions: Vec::<Interaction>::new(),
+            constraints:  Vec::<Constraint>::new(),
             time: 0.,
             n_time_saved_to_sql: 0,
         }
@@ -100,6 +120,10 @@ impl ParticlesSystem {
     /// Add an interaction between two particles of the system.
     fn add_interaction(&mut self, interaction: Interaction) {
         self.interactions.push(interaction);
+    }
+    /// Add a constraint.
+    fn add_constraint(&mut self, constraint: Constraint) {
+        self.constraints.push(constraint);
     }
     /// Advance the time and update the system.
     fn advance_time(&mut self, time_step: f64) {
@@ -126,6 +150,16 @@ impl ParticlesSystem {
             let dr: Vector3D::<f64,PositionU> = p.velocity.cast_unit()*time_step + dv.cast_unit()*time_step/2.;
             p.position = p.position + dr;
             p.velocity = p.velocity + dv;
+        }
+        // Now we check each constraint and make the required updates:
+        for constraint in &self.constraints {
+            match constraint {
+                Constraint::external_constraint(idx,constraint) => {
+                    let (new_pos, new_vel) = constraint.compute_new_dynamical_variables(&self.particles[*idx]);
+                    self.particles[*idx].position = new_pos;
+                    self.particles[*idx].velocity = new_vel;
+                }
+            }
         }
         self.time += time_step;
 	}
@@ -200,7 +234,7 @@ fn main() {
     system.add_particle(
         Particle {
             position: Vector3D::<f64,PositionU>::new(0.,-1.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(-1.,1.,0.).normalize(),
             mass: 1.,
         }
     );
@@ -262,30 +296,33 @@ fn main() {
             Force::Damping(0.5),
         )
     );
-    system.add_interaction(
-        Interaction::external_force(
-            0,
-            ExternalForce::LinearDrag(1.),
-        )
-    );
-    system.add_interaction(
-        Interaction::external_force(
-            1,
-            ExternalForce::LinearDrag(3.),
-        )
-    );
-    system.add_interaction(
-        Interaction::external_force(
-            2,
-            ExternalForce::LinearDrag(1.),
-        )
-    );
-    system.add_interaction(
-        Interaction::external_force(
-            3,
-            ExternalForce::LinearDrag(3.),
-        )
-    );
+
+    for idx in 0..4 {
+        for xy in [-1.,1.] {
+            system.add_constraint(
+                Constraint::external_constraint(
+                    idx,
+                    ExternalConstraint::infinite_wall(
+                        InfiniteWall {
+                            position: Vector3D::<f64,PositionU>::new(xy,0.,0.),
+                            orientation: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
+                        }
+                    )
+                )
+            );
+            system.add_constraint(
+                Constraint::external_constraint(
+                    idx,
+                    ExternalConstraint::infinite_wall(
+                        InfiniteWall {
+                            position: Vector3D::<f64,PositionU>::new(0.,xy,0.),
+                            orientation: Vector3D::<f64,PositionU>::new(0.,xy,0.),
+                        }
+                    )
+                )
+            );
+        }
+    }
 
 
     let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
