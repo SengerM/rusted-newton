@@ -49,7 +49,30 @@ impl Force {
     }
 }
 
-enum ExternalForce {}
+/// Represents an external force, i.e. a force that acts on a particle due to some external agent.
+enum ExternalForce {
+    LinearDrag(f64),
+}
+
+impl ExternalForce {
+    fn calculate_force(&self, a: &Particle) -> Vector3D<f64, ForceU> {
+        match self {
+            ExternalForce::LinearDrag(b) => (a.velocity*(*b)).cast_unit()*-1.,
+        }
+    }
+}
+
+//~ /// Represents an infinite wall that divides space in two halves: 1) Outside the wall nad 2) Inside the wall.
+//~ struct InfiniteWall {
+    //~ position: Vector3d::<f64,PositionU>,
+    //~ orientation: Vector3d::<f64,PositionU>, // Points towards the outside of the wall.
+//~ }
+
+//~ enum ExternalConstraint {
+    //~ infinite_wall(InfiniteWall),
+//~ }
+
+
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
 struct ParticlesSystem {
@@ -90,7 +113,10 @@ impl ParticlesSystem {
                     accelerations[*idx_a] += force.acting_on_a(a,b).cast_unit()/a.mass;
                     accelerations[*idx_b] += force.acting_on_b(a,b).cast_unit()/b.mass;
                 }
-                Interaction::external_force(idx,force) => panic!("External force not implemented!"),
+                Interaction::external_force(idx,force) => {
+                    let a = &self.particles[*idx];
+                    accelerations[*idx] += force.calculate_force(a).cast_unit()/a.mass;
+                }
             }
         }
         // Now we move the system forward in time:
@@ -183,28 +209,28 @@ fn main() {
         Interaction::force_between_two_particles(
             0,
             1,
-            Force::Elastic(1.,0.),
+            Force::Elastic(1.,0.5),
         )
     );
     system.add_interaction(
         Interaction::force_between_two_particles(
             1,
             2,
-            Force::Elastic(1.,0.),
+            Force::Elastic(1.,0.5),
         )
     );
     system.add_interaction(
         Interaction::force_between_two_particles(
             2,
             3,
-            Force::Elastic(1.,0.),
+            Force::Elastic(1.,0.5),
         )
     );
     system.add_interaction(
         Interaction::force_between_two_particles(
             3,
             0,
-            Force::Elastic(1.,0.),
+            Force::Elastic(1.,0.5),
         )
     );
     
@@ -234,6 +260,30 @@ fn main() {
             3,
             0,
             Force::Damping(0.5),
+        )
+    );
+    system.add_interaction(
+        Interaction::external_force(
+            0,
+            ExternalForce::LinearDrag(1.),
+        )
+    );
+    system.add_interaction(
+        Interaction::external_force(
+            1,
+            ExternalForce::LinearDrag(3.),
+        )
+    );
+    system.add_interaction(
+        Interaction::external_force(
+            2,
+            ExternalForce::LinearDrag(1.),
+        )
+    );
+    system.add_interaction(
+        Interaction::external_force(
+            3,
+            ExternalForce::LinearDrag(3.),
         )
     );
 
