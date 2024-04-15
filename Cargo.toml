@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-euclid = "0.22.9"
-sqlite = "0.34.0"
+euclid = "0.22"
+sqlite = "0.34"
+rand = "0.8"

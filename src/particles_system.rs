@@ -31,6 +31,7 @@ pub enum Force {
     Elastic(f64, f64),
     Damping(f64),
     Gravitational,
+    Sticky(f64, f64, f64, f64),
 }
 
 impl Force {
@@ -41,6 +42,18 @@ impl Force {
             Force::Elastic(k, d0) => (r.normalize()*(r.length() - (*d0))*(*k)).cast_unit(),
             Force::Damping(c) => (r.normalize()*((b.velocity-a.velocity).dot(r.cast_unit())*(*c))).cast_unit(),
             Force::Gravitational => (r.normalize()*a.mass*b.mass/r.square_length()).cast_unit(),
+            Force::Sticky(d_well, d_max, F_sticky, F_repuls) => {
+				let d = r.length();
+				if d > *d_max {
+					Vector3D::<f64,units::Force>::new(0.,0.,0.)
+				} else if d > *d_well {
+					// Sticky!
+					(r.normalize()*(*F_sticky)).cast_unit()
+				} else {
+					// Repulsive
+					(r.normalize()*(*F_repuls)).cast_unit()*-1.
+				}
+			}
         }
     }
     /// Computes the force acting on `particle_2` due to this interaction.
@@ -59,7 +72,7 @@ impl ExternalForce {
     fn calculate_force(&self, a: &Particle) -> Vector3D<f64, units::Force> {
         match self {
             ExternalForce::LinearDrag(b) => (a.velocity*(*b)).cast_unit()*-1.,
-            ExternalForce::Gravitational(g) => (*g/a.mass).cast_unit(),
+            ExternalForce::Gravitational(g) => (*g*a.mass).cast_unit(),
         }
     }
 }
