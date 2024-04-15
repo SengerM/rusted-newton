@@ -66,34 +66,38 @@ enum Constraint {
     external_constraint(ParticleIdx,ExternalConstraint),
 }
 
-/// Represents an infinite wall that divides space in two halves: 1) Outside the wall and 2) Inside the wall.
-struct Plane {
-    position: Vector3D::<f64,PositionU>,
-    orientation: Vector3D::<f64,PositionU>, // Points towards the outside of the wall.
-}
-/// Represents a sphere.
-struct Sphere {
-    center: Vector3D::<f64,PositionU>,
-    radius: f64,
-}
-impl Sphere {
-    fn is_inside(&self, point: &Vector3D<f64,PositionU>) -> bool {
-        (self.center - *point).length() < self.radius
+/// A collection of geometrical objects used in the constraints.
+mod geometric_objects {
+    use euclid::Vector3D;
+    /// Represents an infinite plane.
+    pub struct Plane {
+        pub position: Vector3D::<f64,super::PositionU>,
+        pub normal: Vector3D::<f64,super::PositionU>,
+    }
+    /// Represents a sphere.
+    pub struct Sphere {
+        pub center: Vector3D::<f64,super::PositionU>,
+        pub radius: f64,
+    }
+    impl Sphere {
+        pub fn is_inside(&self, point: &Vector3D<f64,super::PositionU>) -> bool {
+            (self.center - *point).length() < self.radius
+        }
     }
 }
 
 enum ExternalConstraint {
-    infinite_wall(Plane),
-    spherical_container(Sphere),
+    infinite_wall(geometric_objects::Plane),
+    spherical_container(geometric_objects::Sphere),
 }
 
 impl ExternalConstraint {
     fn compute_new_dynamical_variables(&self, particle: &Particle) -> (Vector3D<f64,PositionU>, Vector3D<f64,VelocityU>) {
         match self {
             ExternalConstraint::infinite_wall(wall) => {
-                let d = (particle.position - wall.position).dot(wall.orientation);
+                let d = (particle.position - wall.position).dot(wall.normal);
                 if d < 0. {
-                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - (wall.orientation.normalize()*2.0*(particle.velocity.dot(wall.orientation.normalize().cast_unit()))).cast_unit();
+                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - (wall.normal.normalize()*2.0*(particle.velocity.dot(wall.normal.normalize().cast_unit()))).cast_unit();
                     (particle.position, new_vel)
                 } else {
                     (particle.position, particle.velocity)
@@ -233,14 +237,14 @@ fn main() {
     system.add_particle(
         Particle {
             position: Vector3D::<f64,PositionU>::new(1.,0.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(0.,1.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(0.,-1.,0.).normalize(),
             mass: 1.,
         }
     );
     system.add_particle(
         Particle {
             position: Vector3D::<f64,PositionU>::new(0.,1.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(-1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(1.,0.,0.).normalize(),
             mass: 1.,
         }
     );
@@ -322,7 +326,7 @@ fn main() {
             Constraint::external_constraint(
                 particle_idx,
                 ExternalConstraint::spherical_container(
-                    Sphere {
+                    geometric_objects::Sphere {
                         center: Vector3D::<f64,PositionU>::new(0.,0.,0.),
                         radius: 1.,
                     }
@@ -337,9 +341,9 @@ fn main() {
                 //~ Constraint::external_constraint(
                     //~ idx,
                     //~ ExternalConstraint::infinite_wall(
-                        //~ Plane {
+                        //~ geometric_objects::Plane {
                             //~ position: Vector3D::<f64,PositionU>::new(xy,0.,0.),
-                            //~ orientation: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
+                            //~ normal: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
                         //~ }
                     //~ )
                 //~ )
@@ -348,9 +352,9 @@ fn main() {
                 //~ Constraint::external_constraint(
                     //~ idx,
                     //~ ExternalConstraint::infinite_wall(
-                        //~ Plane {
+                        //~ geometric_objects::Plane {
                             //~ position: Vector3D::<f64,PositionU>::new(0.,xy,0.),
-                            //~ orientation: Vector3D::<f64,PositionU>::new(0.,xy,0.),
+                            //~ normal: Vector3D::<f64,PositionU>::new(0.,xy,0.),
                         //~ }
                     //~ )
                 //~ )
