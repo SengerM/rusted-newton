@@ -1,5 +1,5 @@
 use euclid::Vector3D;
-use particles_system::{PositionU, VelocityU, Particle, ParticlesSystem, Interaction, Force, Constraint, ExternalConstraint};
+use particles_system::{units, Particle, ParticlesSystem, Interaction, Force, Constraint, ExternalConstraint};
 
 mod geometric_objects;
 mod particles_system;
@@ -9,29 +9,29 @@ fn main() {
     
     system.add_particle(
         Particle {
-            position: Vector3D::<f64,PositionU>::new(1.,0.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
+            position: Vector3D::<f64,units::Position>::new(1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,units::Velocity>::new(0.,0.,0.),
             mass: 1.,
         }
     );
     system.add_particle(
         Particle {
-            position: Vector3D::<f64,PositionU>::new(0.,1.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(1.,0.,0.).normalize(),
+            position: Vector3D::<f64,units::Position>::new(0.,1.,0.).normalize(),
+            velocity: Vector3D::<f64,units::Velocity>::new(1.,0.,0.).normalize(),
             mass: 1.,
         }
     );
     system.add_particle(
         Particle {
-            position: Vector3D::<f64,PositionU>::new(-1.,0.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(0.,-1.,0.).normalize(),
+            position: Vector3D::<f64,units::Position>::new(-1.,0.,0.).normalize(),
+            velocity: Vector3D::<f64,units::Velocity>::new(0.,-1.,0.).normalize(),
             mass: 1.,
         }
     );
     system.add_particle(
         Particle {
-            position: Vector3D::<f64,PositionU>::new(0.,-1.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(-1.,1.,0.).normalize(),
+            position: Vector3D::<f64,units::Position>::new(0.,-1.,0.).normalize(),
+            velocity: Vector3D::<f64,units::Velocity>::new(-1.,1.,0.).normalize(),
             mass: 1.,
         }
     );
@@ -92,8 +92,8 @@ fn main() {
             Constraint::external_constraint(
                 particle_idx,
                 ExternalConstraint::spherical_container(
-                    geometric_objects::Sphere::<PositionU> {
-                        center: Vector3D::<f64,PositionU>::new(0.,0.,0.),
+                    geometric_objects::Sphere::<units::Position> {
+                        center: Vector3D::<f64,units::Position>::new(0.,0.,0.),
                         radius: 1.,
                     }
                 )

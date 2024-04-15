@@ -3,21 +3,19 @@ use sqlite;
 
 use super::geometric_objects;
 
-/// Defines units of position.
-pub enum PositionU {}
-/// Defines units of velocity.
-pub enum VelocityU {}
-/// Defines units of acceleration;
-pub enum AccelerationU {}
-pub enum ForceU {}
-/// Defines units of mass.
-pub type MassU = f64;
+pub mod units {
+	pub enum Position {}
+	pub enum Velocity {}
+	pub enum Acceleration {}
+	pub enum Force {}
+	pub type Mass = f64;
+}
 
 /// Represents the concept of a particle in classical mechanics.
 pub struct Particle {
-    pub position: Vector3D::<f64, PositionU>,
-    pub velocity: Vector3D::<f64, VelocityU>,
-    pub mass: MassU,
+    pub position: Vector3D::<f64, units::Position>,
+    pub velocity: Vector3D::<f64, units::Velocity>,
+    pub mass: units::Mass,
 }
 
 type ParticleIdx = usize;
@@ -37,7 +35,7 @@ pub enum Force {
 
 impl Force {
     /// Computes the force acting on `particle_1` due to this interaction.
-    fn acting_on_a(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+    fn acting_on_a(&self, a: &Particle, b: &Particle) -> Vector3D<f64, units::Force> {
         let r = b.position-a.position;
         match self {
             Force::Elastic(k, d0) => (r.normalize()*(r.length() - (*d0))*(*k)).cast_unit(),
@@ -46,7 +44,7 @@ impl Force {
         }
     }
     /// Computes the force acting on `particle_2` due to this interaction.
-    fn acting_on_b(&self, a: &Particle, b: &Particle) -> Vector3D<f64, ForceU> {
+    fn acting_on_b(&self, a: &Particle, b: &Particle) -> Vector3D<f64, units::Force> {
         self.acting_on_a(a, b) * -1.
     }
 }
@@ -57,7 +55,7 @@ pub enum ExternalForce {
 }
 
 impl ExternalForce {
-    fn calculate_force(&self, a: &Particle) -> Vector3D<f64, ForceU> {
+    fn calculate_force(&self, a: &Particle) -> Vector3D<f64, units::Force> {
         match self {
             ExternalForce::LinearDrag(b) => (a.velocity*(*b)).cast_unit()*-1.,
         }
@@ -69,17 +67,17 @@ pub enum Constraint {
 }
 
 pub enum ExternalConstraint {
-    infinite_wall(geometric_objects::Plane<PositionU>),
-    spherical_container(geometric_objects::Sphere<PositionU>),
+    infinite_wall(geometric_objects::Plane<units::Position>),
+    spherical_container(geometric_objects::Sphere<units::Position>),
 }
 
 impl ExternalConstraint {
-    fn compute_new_dynamical_variables(&self, particle: &Particle) -> (Vector3D<f64,PositionU>, Vector3D<f64,VelocityU>) {
+    fn compute_new_dynamical_variables(&self, particle: &Particle) -> (Vector3D<f64,units::Position>, Vector3D<f64,units::Velocity>) {
         match self {
             ExternalConstraint::infinite_wall(wall) => {
                 let d = (particle.position - wall.position).dot(wall.normal);
                 if d < 0. {
-                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - (wall.normal.normalize()*2.0*(particle.velocity.dot(wall.normal.normalize().cast_unit()))).cast_unit();
+                    let new_vel: Vector3D<f64,units::Velocity> = particle.velocity - (wall.normal.normalize()*2.0*(particle.velocity.dot(wall.normal.normalize().cast_unit()))).cast_unit();
                     (particle.position, new_vel)
                 } else {
                     (particle.position, particle.velocity)
@@ -90,7 +88,7 @@ impl ExternalConstraint {
                     (particle.position, particle.velocity)
                 } else {
                     let radial_direction = particle.position - sphere.center;
-                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - particle.velocity.project_onto_vector(radial_direction.cast_unit())*2.;
+                    let new_vel: Vector3D<f64,units::Velocity> = particle.velocity - particle.velocity.project_onto_vector(radial_direction.cast_unit())*2.;
                     (particle.position, new_vel)
                 }
             }
@@ -134,7 +132,7 @@ impl ParticlesSystem {
     /// Advance the time and update the system.
     pub fn advance_time(&mut self, time_step: f64) {
         // First we compute the acceleration of each particle using the interactions:
-        let mut accelerations = vec![Vector3D::<f64,AccelerationU>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
+        let mut accelerations = vec![Vector3D::<f64,units::Acceleration>::zero(); self.particles.len()]; // A vector with one acceleration for each particle.
         for interaction in &self.interactions {
             match interaction {
                 Interaction::force_between_two_particles(idx_a, idx_b, force) => {
@@ -152,8 +150,8 @@ impl ParticlesSystem {
         // Now we move the system forward in time:
         for (n_particle,p) in self.particles.iter_mut().enumerate() {
             let a = accelerations[n_particle];
-            let dv: Vector3D::<f64,VelocityU> = a.cast_unit()*time_step;
-            let dr: Vector3D::<f64,PositionU> = p.velocity.cast_unit()*time_step + dv.cast_unit()*time_step/2.;
+            let dv: Vector3D::<f64,units::Velocity> = a.cast_unit()*time_step;
+            let dr: Vector3D::<f64,units::Position> = p.velocity.cast_unit()*time_step + dv.cast_unit()*time_step/2.;
             p.position = p.position + dr;
             p.velocity = p.velocity + dv;
         }
