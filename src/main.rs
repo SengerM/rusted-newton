@@ -67,13 +67,13 @@ enum Constraint {
 }
 
 /// Represents an infinite wall that divides space in two halves: 1) Outside the wall and 2) Inside the wall.
-struct InfiniteWall {
+struct Plane {
     position: Vector3D::<f64,PositionU>,
     orientation: Vector3D::<f64,PositionU>, // Points towards the outside of the wall.
 }
 
 enum ExternalConstraint {
-    infinite_wall(InfiniteWall),
+    infinite_wall(Plane),
 }
 
 impl ExternalConstraint {
@@ -303,7 +303,7 @@ fn main() {
                 Constraint::external_constraint(
                     idx,
                     ExternalConstraint::infinite_wall(
-                        InfiniteWall {
+                        Plane {
                             position: Vector3D::<f64,PositionU>::new(xy,0.,0.),
                             orientation: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
                         }
@@ -314,7 +314,7 @@ fn main() {
                 Constraint::external_constraint(
                     idx,
                     ExternalConstraint::infinite_wall(
-                        InfiniteWall {
+                        Plane {
                             position: Vector3D::<f64,PositionU>::new(0.,xy,0.),
                             orientation: Vector3D::<f64,PositionU>::new(0.,xy,0.),
                         }
