@@ -52,12 +52,14 @@ impl Force {
 /// Represents an external force, i.e. a force that acts on a particle due to some external agent.
 pub enum ExternalForce {
     LinearDrag(f64),
+    Gravitational(Vector3D::<f64,units::Acceleration>),
 }
 
 impl ExternalForce {
     fn calculate_force(&self, a: &Particle) -> Vector3D<f64, units::Force> {
         match self {
             ExternalForce::LinearDrag(b) => (a.velocity*(*b)).cast_unit()*-1.,
+            ExternalForce::Gravitational(g) => (*g/a.mass).cast_unit(),
         }
     }
 }
