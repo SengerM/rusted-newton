@@ -71,21 +71,41 @@ struct Plane {
     position: Vector3D::<f64,PositionU>,
     orientation: Vector3D::<f64,PositionU>, // Points towards the outside of the wall.
 }
+/// Represents a sphere.
+struct Sphere {
+    center: Vector3D::<f64,PositionU>,
+    radius: f64,
+}
+impl Sphere {
+    fn is_inside(&self, point: &Vector3D<f64,PositionU>) -> bool {
+        (self.center - *point).length() < self.radius
+    }
+}
 
 enum ExternalConstraint {
     infinite_wall(Plane),
+    spherical_container(Sphere),
 }
 
 impl ExternalConstraint {
-    fn compute_new_dynamical_variables(&self, a: &Particle) -> (Vector3D<f64,PositionU>, Vector3D<f64,VelocityU>) {
+    fn compute_new_dynamical_variables(&self, particle: &Particle) -> (Vector3D<f64,PositionU>, Vector3D<f64,VelocityU>) {
         match self {
             ExternalConstraint::infinite_wall(wall) => {
-                let d = (a.position - wall.position).dot(wall.orientation);
+                let d = (particle.position - wall.position).dot(wall.orientation);
                 if d < 0. {
-                    let new_vel: Vector3D<f64,VelocityU> = a.velocity - (wall.orientation.normalize()*2.0*(a.velocity.dot(wall.orientation.normalize().cast_unit()))).cast_unit();
-                    (a.position, new_vel)
+                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - (wall.orientation.normalize()*2.0*(particle.velocity.dot(wall.orientation.normalize().cast_unit()))).cast_unit();
+                    (particle.position, new_vel)
                 } else {
-                    (a.position, a.velocity)
+                    (particle.position, particle.velocity)
+                }
+            }
+            ExternalConstraint::spherical_container(sphere) => {
+                if sphere.is_inside(&particle.position) {
+                    (particle.position, particle.velocity)
+                } else {
+                    let radial_direction = particle.position - sphere.center;
+                    let new_vel: Vector3D<f64,VelocityU> = particle.velocity - particle.velocity.project_onto_vector(radial_direction.cast_unit())*2.;
+                    (particle.position, new_vel)
                 }
             }
         }
@@ -297,32 +317,46 @@ fn main() {
         )
     );
 
-    for idx in 0..4 {
-        for xy in [-1.,1.] {
-            system.add_constraint(
-                Constraint::external_constraint(
-                    idx,
-                    ExternalConstraint::infinite_wall(
-                        Plane {
-                            position: Vector3D::<f64,PositionU>::new(xy,0.,0.),
-                            orientation: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
-                        }
-                    )
+    for particle_idx in 0..4 {
+        system.add_constraint(
+            Constraint::external_constraint(
+                particle_idx,
+                ExternalConstraint::spherical_container(
+                    Sphere {
+                        center: Vector3D::<f64,PositionU>::new(0.,0.,0.),
+                        radius: 1.,
+                    }
                 )
-            );
-            system.add_constraint(
-                Constraint::external_constraint(
-                    idx,
-                    ExternalConstraint::infinite_wall(
-                        Plane {
-                            position: Vector3D::<f64,PositionU>::new(0.,xy,0.),
-                            orientation: Vector3D::<f64,PositionU>::new(0.,xy,0.),
-                        }
-                    )
-                )
-            );
-        }
+            )
+        )
     }
+    
+    //~ for idx in 0..4 {
+        //~ for xy in [-1.,1.] {
+            //~ system.add_constraint(
+                //~ Constraint::external_constraint(
+                    //~ idx,
+                    //~ ExternalConstraint::infinite_wall(
+                        //~ Plane {
+                            //~ position: Vector3D::<f64,PositionU>::new(xy,0.,0.),
+                            //~ orientation: Vector3D::<f64,PositionU>::new(-xy,0.,0.),
+                        //~ }
+                    //~ )
+                //~ )
+            //~ );
+            //~ system.add_constraint(
+                //~ Constraint::external_constraint(
+                    //~ idx,
+                    //~ ExternalConstraint::infinite_wall(
+                        //~ Plane {
+                            //~ position: Vector3D::<f64,PositionU>::new(0.,xy,0.),
+                            //~ orientation: Vector3D::<f64,PositionU>::new(0.,xy,0.),
+                        //~ }
+                    //~ )
+                //~ )
+            //~ );
+        //~ }
+    //~ }
 
 
     let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
