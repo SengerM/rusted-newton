@@ -69,8 +69,8 @@ enum Constraint {
 }
 
 enum ExternalConstraint {
-    infinite_wall(geometric_objects::Plane),
-    spherical_container(geometric_objects::Sphere),
+    infinite_wall(geometric_objects::Plane<PositionU>),
+    spherical_container(geometric_objects::Sphere<PositionU>),
 }
 
 impl ExternalConstraint {
@@ -219,7 +219,7 @@ fn main() {
     system.add_particle(
         Particle {
             position: Vector3D::<f64,PositionU>::new(1.,0.,0.).normalize(),
-            velocity: Vector3D::<f64,VelocityU>::new(0.,-1.,0.).normalize(),
+            velocity: Vector3D::<f64,VelocityU>::new(0.,0.,0.),
             mass: 1.,
         }
     );
@@ -242,6 +242,13 @@ fn main() {
             position: Vector3D::<f64,PositionU>::new(0.,-1.,0.).normalize(),
             velocity: Vector3D::<f64,VelocityU>::new(-1.,1.,0.).normalize(),
             mass: 1.,
+        }
+    );
+    system.add_particle(
+        Particle {
+            position: Vector3D::<f64,PositionU>::new(0.,0.,0.),
+            velocity: Vector3D::<f64,VelocityU>::new(0.,0.,1.),
+            mass: 0.3,
         }
     );
     
@@ -271,6 +278,13 @@ fn main() {
             3,
             0,
             Force::Elastic(1.,0.5),
+        )
+    );
+    system.add_interaction(
+        Interaction::force_between_two_particles(
+            0,
+            4,
+            Force::Elastic(1.,0.2),
         )
     );
     
@@ -303,12 +317,12 @@ fn main() {
         )
     );
 
-    for particle_idx in 0..4 {
+    for particle_idx in 0..system.particles.len() {
         system.add_constraint(
             Constraint::external_constraint(
                 particle_idx,
                 ExternalConstraint::spherical_container(
-                    geometric_objects::Sphere {
+                    geometric_objects::Sphere::<PositionU> {
                         center: Vector3D::<f64,PositionU>::new(0.,0.,0.),
                         radius: 1.,
                     }
