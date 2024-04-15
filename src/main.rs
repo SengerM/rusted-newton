@@ -1,6 +1,8 @@
 use euclid::Vector3D;
 use sqlite;
 
+mod geometric_objects;
+
 /// Defines units of position.
 enum PositionU {}
 /// Defines units of velocity.
@@ -64,26 +66,6 @@ impl ExternalForce {
 
 enum Constraint {
     external_constraint(ParticleIdx,ExternalConstraint),
-}
-
-/// A collection of geometrical objects used in the constraints.
-mod geometric_objects {
-    use euclid::Vector3D;
-    /// Represents an infinite plane.
-    pub struct Plane {
-        pub position: Vector3D::<f64,super::PositionU>,
-        pub normal: Vector3D::<f64,super::PositionU>,
-    }
-    /// Represents a sphere.
-    pub struct Sphere {
-        pub center: Vector3D::<f64,super::PositionU>,
-        pub radius: f64,
-    }
-    impl Sphere {
-        pub fn is_inside(&self, point: &Vector3D<f64,super::PositionU>) -> bool {
-            (self.center - *point).length() < self.radius
-        }
-    }
 }
 
 enum ExternalConstraint {
