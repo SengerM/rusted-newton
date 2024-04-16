@@ -1,5 +1,7 @@
 use euclid::Vector3D;
 use sqlite;
+use serde::{Serialize, Deserialize};
+use serde_json;
 
 use super::geometric_objects;
 
@@ -12,6 +14,8 @@ pub mod units {
 }
 
 /// Represents the concept of a particle in classical mechanics.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Particle {
     pub position: Vector3D::<f64, units::Position>,
     pub velocity: Vector3D::<f64, units::Velocity>,
@@ -28,9 +32,13 @@ pub enum Interaction {
 
 /// Represents a force.
 pub enum Force {
+	/// The force by an ideal spring, parameters are (k,d0).
     Elastic(f64, f64),
-    Damping(f64),
+    /// The force by a linear damping, the parameter is the proportionality factor between velocity and force.
+    Damping(f64),/// Represents a force.
+    /// Gravitational force given by Newton's formula.
     Gravitational,
+    /// A sticky force, parameters are (d_well, d_max, F_sticky, F_repuls).
     Sticky(f64, f64, f64, f64),
 }
 
@@ -224,4 +232,11 @@ impl ParticlesSystem {
 		connection.execute("COMMIT").unwrap();
         self.n_time_saved_to_sql += 1;
     }
+	/// Save the system into a json file.
+	pub fn to_json(&self, file_name: &String) {
+		let json_str = serde_json::to_string(&self.particles).expect("Failed to serialize");
+		dbg!(&json_str);
+		let particles: Vec<Particle> = serde_json::from_str(&json_str).expect("Failed to deserialize");
+		dbg!(particles);
+	}
 }

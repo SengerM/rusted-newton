@@ -1,3 +1,4 @@
+#![allow(warnings)]
 use rand::distributions::{Distribution, Uniform};
 use euclid::Vector3D;
 use particles_system::{units, Particle, ParticlesSystem, Interaction, Force, Constraint, ExternalConstraint, ExternalForce};
@@ -60,7 +61,9 @@ fn main() {
             );
         }
     }
-    
+
+    system.to_json(&String::from("/home/msenger/Desktop/system.json"));
+    panic!("AAAAAAAAAAAAAAAAAAAAA");
     system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(); // Save initial state.
     for n_time in 1..999999 {
