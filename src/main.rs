@@ -8,7 +8,7 @@ mod particles_system;
 fn main() {
 	let mut system = ParticlesSystem::new();
 
-    const N_PARTICLES: usize = 22;
+    const N_PARTICLES: usize = 11;
 
     let step = Uniform::new(-0.5, 0.5);
     let mut rng = rand::thread_rng();
@@ -58,22 +58,15 @@ fn main() {
                     Force::Sticky(0.2,0.21,10.,99.),
                 )
             );
-            //~ system.add_interaction(
-                //~ Interaction::force_between_two_particles(
-                    //~ n_particle,
-                    //~ m_particle,
-                    //~ Force::Damping(1.),
-                //~ )
-            //~ );
         }
     }
     
-    let connection = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
-    system.dump_to_sqlite(&connection); // Save initial state.
+    system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
+    system.dump_to_sqlite(); // Save initial state.
     for n_time in 1..999999 {
         system.advance_time(0.00001);
-        if n_time % 999 == 0 {
-            system.dump_to_sqlite(&connection);
+        if n_time % 9999 == 0 {
+            system.dump_to_sqlite();
         }
     }
 }

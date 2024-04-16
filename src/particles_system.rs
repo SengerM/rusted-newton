@@ -118,6 +118,7 @@ pub struct ParticlesSystem {
     pub constraints: Vec<Constraint>,
     time: f64,
     n_time_saved_to_sql: usize,
+    sqlite_connection: Option<sqlite::Connection>,
 }
 
 impl ParticlesSystem {
@@ -129,6 +130,7 @@ impl ParticlesSystem {
             constraints:  Vec::<Constraint>::new(),
             time: 0.,
             n_time_saved_to_sql: 0,
+            sqlite_connection: None,
         }
     }
     /// Add a particle to the system.
@@ -183,14 +185,22 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
-        let connection = sqlite::open(file_name).unwrap();
-        connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
-        connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
-        connection
+    pub fn create_sqlite_connection(&mut self, file_name: &String) {
+        self.sqlite_connection = Some(sqlite::open(file_name).unwrap());
+        match &self.sqlite_connection {
+			Some(connection) => {
+				connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+				connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
+			}
+			None => panic!("This should never happen..."),
+		}
     }
     /// Save the state of the system into an SQLite file.
-    pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
+    pub fn dump_to_sqlite(&mut self) {
+		let connection = match &self.sqlite_connection {
+			Some(conn) => conn,
+			None => panic!("No SQLite connection was created before!"),
+		};
 		connection.execute("BEGIN TRANSACTION").unwrap();
         for (n_particle,p) in self.particles.iter().enumerate() {
             let n = &self.n_time_saved_to_sql;
