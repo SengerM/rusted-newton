@@ -139,13 +139,14 @@ impl ExternalConstraint {
 }
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct ParticlesSystem {
     pub particles: Vec<Particle>,
     pub interactions: Vec<Interaction>,
     pub constraints: Vec<Constraint>,
     time: f64,
     n_time_saved_to_sql: usize,
-    sqlite_connection: Option<sqlite::Connection>,
 }
 
 impl ParticlesSystem {
@@ -157,7 +158,6 @@ impl ParticlesSystem {
             constraints:  Vec::<Constraint>::new(),
             time: 0.,
             n_time_saved_to_sql: 0,
-            sqlite_connection: None,
         }
     }
     /// Add a particle to the system.
@@ -212,22 +212,14 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    pub fn create_sqlite_connection(&mut self, file_name: &String) {
-        self.sqlite_connection = Some(sqlite::open(file_name).unwrap());
-        match &self.sqlite_connection {
-			Some(connection) => {
-				connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
-				connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
-			}
-			None => panic!("This should never happen..."),
-		}
+    pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
+        let connection = sqlite::open(file_name).unwrap();
+        connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+        connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
+        connection
     }
     /// Save the state of the system into an SQLite file.
-    pub fn dump_to_sqlite(&mut self) {
-		let connection = match &self.sqlite_connection {
-			Some(conn) => conn,
-			None => panic!("No SQLite connection was created before!"),
-		};
+    pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
 		connection.execute("BEGIN TRANSACTION").unwrap();
         for (n_particle,p) in self.particles.iter().enumerate() {
             let n = &self.n_time_saved_to_sql;
@@ -253,9 +245,9 @@ impl ParticlesSystem {
     }
 	/// Save the system into a json file.
 	pub fn to_json(&self, file_name: &String) {
-		let json_str = serde_json::to_string(&self.constraints).expect("Failed to serialize");
+		let json_str = serde_json::to_string(&self).expect("Failed to serialize");
 		dbg!(&json_str);
-		let des: Vec<Constraint> = serde_json::from_str(&json_str).expect("Failed to deserialize");
+		let des: ParticlesSystem = serde_json::from_str(&json_str).expect("Failed to deserialize");
 		dbg!(des);
 	}
 }
