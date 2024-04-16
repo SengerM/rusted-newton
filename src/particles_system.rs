@@ -192,35 +192,24 @@ impl ParticlesSystem {
     /// Save the state of the system into an SQLite file.
     pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
         for (n_particle,p) in self.particles.iter().enumerate() {
-            let mut query = String::new();
-            query.push_str("INSERT INTO particles_system VALUES (");
-            query.push_str(&self.n_time_saved_to_sql.to_string());
-            query.push_str(", ");
-            query.push_str(&n_particle.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.x.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.y.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.z.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.x.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.y.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.z.to_string());
-            query.push_str(", ");
-            query.push_str(&p.mass.to_string());
-            query.push_str(");");
-            connection.execute(query).unwrap();
+            let n = &self.n_time_saved_to_sql;
+            let n_particle = &n_particle;
+            let pos_x = &p.position.x;
+            let pos_y = &p.position.y;
+            let pos_z = &p.position.z;
+            let vel_x = &p.velocity.x;
+            let vel_y = &p.velocity.y;
+            let vel_z = &p.velocity.z;
+            let m = &p.mass;
+            connection.execute(
+				format!("INSERT INTO particles_system VALUES ({n},{n_particle},{pos_x},{pos_y},{pos_z},{vel_x},{vel_y},{vel_z},{m});")
+            ).unwrap();
         }
-        let mut query = String::new();
-        query.push_str("INSERT INTO time VALUES (");
-        query.push_str(&self.n_time_saved_to_sql.to_string());
-        query.push_str(", ");
-        query.push_str(&self.time.to_string());
-        query.push_str(");");
-        connection.execute(query).unwrap();
+        let n_time = &self.n_time_saved_to_sql;
+        let t = &self.time;
+        connection.execute(
+			format!("INSERT INTO time VALUES ({n_time},{t});")
+        ).unwrap();
 
         self.n_time_saved_to_sql += 1;
     }
