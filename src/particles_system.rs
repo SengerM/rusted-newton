@@ -2,6 +2,7 @@ use euclid::Vector3D;
 use sqlite;
 use serde::{Serialize, Deserialize};
 use serde_json;
+use std::fs;
 
 use super::geometric_objects;
 
@@ -246,8 +247,6 @@ impl ParticlesSystem {
 	/// Save the system into a json file.
 	pub fn to_json(&self, file_name: &String) {
 		let json_str = serde_json::to_string(&self).expect("Failed to serialize");
-		dbg!(&json_str);
-		let des: ParticlesSystem = serde_json::from_str(&json_str).expect("Failed to deserialize");
-		dbg!(des);
+		fs::write(file_name, json_str).expect("Unable to write file");
 	}
 }

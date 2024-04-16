@@ -62,8 +62,6 @@ fn main() {
         }
     }
 
-    system.to_json(&String::from("/home/msenger/Desktop/system.json"));
-    panic!("AAAAAAAAAAAAAAAAAAAAA");
     let conn = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
     system.dump_to_sqlite(&conn); // Save initial state.
     for n_time in 1..999999 {
@@ -72,4 +70,5 @@ fn main() {
             system.dump_to_sqlite(&conn);
         }
     }
+    system.to_json(&String::from("/home/msenger/Desktop/system.json"));
 }
