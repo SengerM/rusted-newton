@@ -6,9 +6,18 @@ use serde_json;
 use super::geometric_objects;
 
 pub mod units {
+	use serde::{Serialize, Deserialize};
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Position {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Velocity {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Acceleration {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Force {}
 	pub type Mass = f64;
 }
@@ -91,10 +100,14 @@ impl ExternalForce {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Constraint {
     external_constraint(ParticleIdx,ExternalConstraint),
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum ExternalConstraint {
     infinite_wall(geometric_objects::Plane<units::Position>),
     spherical_container(geometric_objects::Sphere<units::Position>),
@@ -240,9 +253,9 @@ impl ParticlesSystem {
     }
 	/// Save the system into a json file.
 	pub fn to_json(&self, file_name: &String) {
-		let json_str = serde_json::to_string(&self.interactions).expect("Failed to serialize");
+		let json_str = serde_json::to_string(&self.constraints).expect("Failed to serialize");
 		dbg!(&json_str);
-		let des: Vec<Interaction> = serde_json::from_str(&json_str).expect("Failed to deserialize");
+		let des: Vec<Constraint> = serde_json::from_str(&json_str).expect("Failed to deserialize");
 		dbg!(des);
 	}
 }
