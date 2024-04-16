@@ -25,12 +25,16 @@ pub struct Particle {
 type ParticleIdx = usize;
 
 /// Represents an interaction between two particles, which will lead to a force.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Interaction {
     force_between_two_particles(ParticleIdx,ParticleIdx,Force),
     external_force(ParticleIdx,ExternalForce),
 }
 
 /// Represents a force.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Force {
 	/// The force by an ideal spring, parameters are (k,d0).
     Elastic(f64, f64),
@@ -71,6 +75,8 @@ impl Force {
 }
 
 /// Represents an external force, i.e. a force that acts on a particle due to some external agent.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum ExternalForce {
     LinearDrag(f64),
     Gravitational(Vector3D::<f64,units::Acceleration>),
@@ -234,9 +240,9 @@ impl ParticlesSystem {
     }
 	/// Save the system into a json file.
 	pub fn to_json(&self, file_name: &String) {
-		let json_str = serde_json::to_string(&self.particles).expect("Failed to serialize");
+		let json_str = serde_json::to_string(&self.interactions).expect("Failed to serialize");
 		dbg!(&json_str);
-		let particles: Vec<Particle> = serde_json::from_str(&json_str).expect("Failed to deserialize");
-		dbg!(particles);
+		let des: Vec<Interaction> = serde_json::from_str(&json_str).expect("Failed to deserialize");
+		dbg!(des);
 	}
 }
