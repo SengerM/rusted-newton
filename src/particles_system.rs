@@ -191,6 +191,7 @@ impl ParticlesSystem {
     }
     /// Save the state of the system into an SQLite file.
     pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
+		connection.execute("BEGIN TRANSACTION").unwrap();
         for (n_particle,p) in self.particles.iter().enumerate() {
             let n = &self.n_time_saved_to_sql;
             let n_particle = &n_particle;
@@ -210,7 +211,7 @@ impl ParticlesSystem {
         connection.execute(
 			format!("INSERT INTO time VALUES ({n_time},{t});")
         ).unwrap();
-
+		connection.execute("COMMIT").unwrap();
         self.n_time_saved_to_sql += 1;
     }
 }
