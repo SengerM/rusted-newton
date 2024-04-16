@@ -118,6 +118,7 @@ pub struct ParticlesSystem {
     pub constraints: Vec<Constraint>,
     time: f64,
     n_time_saved_to_sql: usize,
+    sqlite_connection: Option<sqlite::Connection>,
 }
 
 impl ParticlesSystem {
@@ -129,6 +130,7 @@ impl ParticlesSystem {
             constraints:  Vec::<Constraint>::new(),
             time: 0.,
             n_time_saved_to_sql: 0,
+            sqlite_connection: None,
         }
     }
     /// Add a particle to the system.
@@ -183,45 +185,43 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
-        let connection = sqlite::open(file_name).unwrap();
-        connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
-        connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
-        connection
+    pub fn create_sqlite_connection(&mut self, file_name: &String) {
+        self.sqlite_connection = Some(sqlite::open(file_name).unwrap());
+        match &self.sqlite_connection {
+			Some(connection) => {
+				connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+				connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
+			}
+			None => panic!("This should never happen..."),
+		}
     }
     /// Save the state of the system into an SQLite file.
-    pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
+    pub fn dump_to_sqlite(&mut self) {
+		let connection = match &self.sqlite_connection {
+			Some(conn) => conn,
+			None => panic!("No SQLite connection was created before!"),
+		};
+		connection.execute("BEGIN TRANSACTION").unwrap();
         for (n_particle,p) in self.particles.iter().enumerate() {
-            let mut query = String::new();
-            query.push_str("INSERT INTO particles_system VALUES (");
-            query.push_str(&self.n_time_saved_to_sql.to_string());
-            query.push_str(", ");
-            query.push_str(&n_particle.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.x.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.y.to_string());
-            query.push_str(", ");
-            query.push_str(&p.position.z.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.x.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.y.to_string());
-            query.push_str(", ");
-            query.push_str(&p.velocity.z.to_string());
-            query.push_str(", ");
-            query.push_str(&p.mass.to_string());
-            query.push_str(");");
-            connection.execute(query).unwrap();
+            let n = &self.n_time_saved_to_sql;
+            let n_particle = &n_particle;
+            let pos_x = &p.position.x;
+            let pos_y = &p.position.y;
+            let pos_z = &p.position.z;
+            let vel_x = &p.velocity.x;
+            let vel_y = &p.velocity.y;
+            let vel_z = &p.velocity.z;
+            let m = &p.mass;
+            connection.execute(
+				format!("INSERT INTO particles_system VALUES ({n},{n_particle},{pos_x},{pos_y},{pos_z},{vel_x},{vel_y},{vel_z},{m});")
+            ).unwrap();
         }
-        let mut query = String::new();
-        query.push_str("INSERT INTO time VALUES (");
-        query.push_str(&self.n_time_saved_to_sql.to_string());
-        query.push_str(", ");
-        query.push_str(&self.time.to_string());
-        query.push_str(");");
-        connection.execute(query).unwrap();
-
+        let n_time = &self.n_time_saved_to_sql;
+        let t = &self.time;
+        connection.execute(
+			format!("INSERT INTO time VALUES ({n_time},{t});")
+        ).unwrap();
+		connection.execute("COMMIT").unwrap();
         self.n_time_saved_to_sql += 1;
     }
 }
