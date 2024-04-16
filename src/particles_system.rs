@@ -249,4 +249,10 @@ impl ParticlesSystem {
 		let json_str = serde_json::to_string(&self).expect("Failed to serialize");
 		fs::write(file_name, json_str).expect("Unable to write file");
 	}
+	/// Create a new particles system from a json file.
+	pub fn from_json(file_path: &String) -> Self {
+		let data = fs::read_to_string(file_path).expect("Unable to read file");
+		let system: ParticlesSystem = serde_json::from_str(&data).expect("Failed to deserialize");
+		system
+	}
 }
