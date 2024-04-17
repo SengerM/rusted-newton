@@ -215,46 +215,8 @@ impl ParticlesSystem {
     /// Creates an SQLite file to save the data.
     pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
         let connection = sqlite::open(file_name).unwrap();
-        match connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);") {
-			Ok(whatever) => "fine",
-			Err(error) => {
-				match error.code {
-					Some(1) => {
-						match error.message {
-							Some(ref msg) => {
-								if msg == "table particles_system already exists" {
-									"ok"
-								} else {
-									panic!("Something happened {:?}", error);
-								}
-							}
-							_ => panic!("Something happened {:?}", error),
-						}
-					}
-					_ => panic!("Something happened {:?}", error),
-				}
-			}
-		};
-        match connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);") {
-			Ok(whatever) => "fine",
-			Err(error) => {
-				match error.code {
-					Some(1) => {
-						match error.message {
-							Some(ref msg) => {
-								if msg == "table time already exists" {
-									"ok"
-								} else {
-									panic!("Something happened {:?}", error);
-								}
-							}
-							_ => panic!("Something happened {:?}", error),
-						}
-					}
-					_ => panic!("Something happened {:?}", error),
-				}
-			}
-		};
+        connection.execute("CREATE TABLE IF NOT EXISTS particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+        connection.execute("CREATE TABLE IF NOT EXISTS time (n_time INTEGER, time FLOAT);").unwrap();
         connection
     }
     /// Save the state of the system into an SQLite file.
