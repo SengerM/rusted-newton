@@ -1,17 +1,31 @@
 use euclid::Vector3D;
 use sqlite;
+use serde::{Serialize, Deserialize};
+use serde_json;
+use std::fs;
 
 use super::geometric_objects;
 
 pub mod units {
+	use serde::{Serialize, Deserialize};
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Position {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Velocity {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Acceleration {}
+	#[derive(Serialize, Deserialize)]
+	#[derive(Debug)]
 	pub enum Force {}
 	pub type Mass = f64;
 }
 
 /// Represents the concept of a particle in classical mechanics.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct Particle {
     pub position: Vector3D::<f64, units::Position>,
     pub velocity: Vector3D::<f64, units::Velocity>,
@@ -21,16 +35,24 @@ pub struct Particle {
 type ParticleIdx = usize;
 
 /// Represents an interaction between two particles, which will lead to a force.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Interaction {
     force_between_two_particles(ParticleIdx,ParticleIdx,Force),
     external_force(ParticleIdx,ExternalForce),
 }
 
 /// Represents a force.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Force {
+	/// The force by an ideal spring, parameters are (k,d0).
     Elastic(f64, f64),
-    Damping(f64),
+    /// The force by a linear damping, the parameter is the proportionality factor between velocity and force.
+    Damping(f64),/// Represents a force.
+    /// Gravitational force given by Newton's formula.
     Gravitational,
+    /// A sticky force, parameters are (d_well, d_max, F_sticky, F_repuls).
     Sticky(f64, f64, f64, f64),
 }
 
@@ -63,6 +85,8 @@ impl Force {
 }
 
 /// Represents an external force, i.e. a force that acts on a particle due to some external agent.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum ExternalForce {
     LinearDrag(f64),
     Gravitational(Vector3D::<f64,units::Acceleration>),
@@ -77,10 +101,14 @@ impl ExternalForce {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum Constraint {
     external_constraint(ParticleIdx,ExternalConstraint),
 }
 
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub enum ExternalConstraint {
     infinite_wall(geometric_objects::Plane<units::Position>),
     spherical_container(geometric_objects::Sphere<units::Position>),
@@ -112,13 +140,14 @@ impl ExternalConstraint {
 }
 
 /// Represents a system of particles, i.e. a collection of particles that interact.
+#[derive(Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct ParticlesSystem {
     pub particles: Vec<Particle>,
     pub interactions: Vec<Interaction>,
     pub constraints: Vec<Constraint>,
     time: f64,
     n_time_saved_to_sql: usize,
-    sqlite_connection: Option<sqlite::Connection>,
 }
 
 impl ParticlesSystem {
@@ -130,7 +159,6 @@ impl ParticlesSystem {
             constraints:  Vec::<Constraint>::new(),
             time: 0.,
             n_time_saved_to_sql: 0,
-            sqlite_connection: None,
         }
     }
     /// Add a particle to the system.
@@ -185,22 +213,14 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    pub fn create_sqlite_connection(&mut self, file_name: &String) {
-        self.sqlite_connection = Some(sqlite::open(file_name).unwrap());
-        match &self.sqlite_connection {
-			Some(connection) => {
-				connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
-				connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
-			}
-			None => panic!("This should never happen..."),
-		}
+    pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
+        let connection = sqlite::open(file_name).unwrap();
+        connection.execute("CREATE TABLE particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
+        connection.execute("CREATE TABLE time (n_time INTEGER, time FLOAT);").unwrap();
+        connection
     }
     /// Save the state of the system into an SQLite file.
-    pub fn dump_to_sqlite(&mut self) {
-		let connection = match &self.sqlite_connection {
-			Some(conn) => conn,
-			None => panic!("No SQLite connection was created before!"),
-		};
+    pub fn dump_to_sqlite(&mut self, connection: &sqlite::Connection) {
 		connection.execute("BEGIN TRANSACTION").unwrap();
         for (n_particle,p) in self.particles.iter().enumerate() {
             let n = &self.n_time_saved_to_sql;
@@ -224,4 +244,15 @@ impl ParticlesSystem {
 		connection.execute("COMMIT").unwrap();
         self.n_time_saved_to_sql += 1;
     }
+	/// Save the system into a json file.
+	pub fn to_json(&self, file_name: &String) {
+		let json_str = serde_json::to_string(&self).expect("Failed to serialize");
+		fs::write(file_name, json_str).expect("Unable to write file");
+	}
+	/// Create a new particles system from a json file.
+	pub fn from_json(file_path: &String) -> Self {
+		let data = fs::read_to_string(file_path).expect("Unable to read file");
+		let system: ParticlesSystem = serde_json::from_str(&data).expect("Failed to deserialize");
+		system
+	}
 }
