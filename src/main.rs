@@ -2,7 +2,7 @@
 use rand::distributions::{Distribution, Uniform};
 use euclid::Vector3D;
 use particles_system::{units, Particle, ParticlesSystem, Interaction, Force, Constraint, ExternalConstraint, ExternalForce};
-use indicatif::ProgressBar;
+use indicatif::{ProgressBar, ProgressStyle};
 
 mod geometric_objects;
 mod particles_system;
@@ -69,6 +69,7 @@ fn main() {
     system.dump_to_sqlite(&conn); // Save initial state.
     const N_ITERATIONS: u64 = 999999;
     let bar = ProgressBar::new(N_ITERATIONS);
+    bar.set_style(ProgressStyle::with_template("[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} [{eta_precise}]").unwrap());
     for n_time in 1..N_ITERATIONS {
         bar.inc(1);
         system.advance_time(0.00001);
