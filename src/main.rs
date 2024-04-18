@@ -9,7 +9,7 @@ mod particles_system;
 fn main() {
 	let mut system = ParticlesSystem::new();
 
-    const N_PARTICLES: usize = 11;
+    const N_PARTICLES: usize = 5;
 
     let step = Uniform::new(-0.5, 0.5);
     let mut rng = rand::thread_rng();
@@ -63,13 +63,14 @@ fn main() {
         }
     }
 
-    let conn = system.create_sqlite_connection(&String::from("/home/msenger/Desktop/newton.db"));
+    //~ let mut system = ParticlesSystem::from_json(&String::from("/home/msenger/Desktop/system.json"));
+    let conn = system.create_sqlite_connection(&"/home/msenger/Desktop/newton.db");
     system.dump_to_sqlite(&conn); // Save initial state.
     for n_time in 1..999999 {
         system.advance_time(0.00001);
-        if n_time % 9999 == 0 {
+        if n_time % 999 == 0 {
             system.dump_to_sqlite(&conn);
         }
     }
-    system.to_json(&String::from("/home/msenger/Desktop/system.json"));
+    system.to_json(&"/home/msenger/Desktop/system.json");
 }

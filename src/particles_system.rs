@@ -217,7 +217,7 @@ impl ParticlesSystem {
         self.time += time_step;
 	}
     /// Creates an SQLite file to save the data.
-    pub fn create_sqlite_connection(&self, file_name: &String) -> sqlite::Connection {
+    pub fn create_sqlite_connection(&self, file_name: &str) -> sqlite::Connection {
         let connection = sqlite::open(file_name).unwrap();
         connection.execute("CREATE TABLE IF NOT EXISTS particles_system (n_time INTEGER, n_particle INTEGER, position_x FLOAT, position_y FLOAT, position_z FLOAT, velocity_x FLOAT, velocity_y FLOAT, velocity_z FLOAT, mass FLOAT);").unwrap();
         connection.execute("CREATE TABLE IF NOT EXISTS time (n_time INTEGER, time FLOAT);").unwrap();
@@ -249,12 +249,12 @@ impl ParticlesSystem {
         self.n_time_saved_to_sql += 1;
     }
 	/// Save the system into a json file.
-	pub fn to_json(&self, file_name: &String) {
+	pub fn to_json(&self, file_name: &str) {
 		let json_str = serde_json::to_string(&self).expect("Failed to serialize");
 		fs::write(file_name, json_str).expect("Unable to write file");
 	}
 	/// Create a new particles system from a json file.
-	pub fn from_json(file_path: &String) -> Self {
+	pub fn from_json(file_path: &str) -> Self {
 		let data = fs::read_to_string(file_path).expect("Unable to read file");
 		let system: ParticlesSystem = serde_json::from_str(&data).expect("Failed to deserialize");
 		system
