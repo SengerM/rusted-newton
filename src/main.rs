@@ -2,6 +2,7 @@
 use rand::distributions::{Distribution, Uniform};
 use euclid::Vector3D;
 use particles_system::{units, Particle, ParticlesSystem, Interaction, Force, Constraint, ExternalConstraint, ExternalForce};
+use indicatif::ProgressBar;
 
 mod geometric_objects;
 mod particles_system;
@@ -66,11 +67,15 @@ fn main() {
     //~ let mut system = ParticlesSystem::from_json(&String::from("/home/msenger/Desktop/system.json"));
     let conn = system.create_sqlite_connection(&"/home/msenger/Desktop/newton.db");
     system.dump_to_sqlite(&conn); // Save initial state.
-    for n_time in 1..999999 {
+    const N_ITERATIONS: u64 = 999999;
+    let bar = ProgressBar::new(N_ITERATIONS);
+    for n_time in 1..N_ITERATIONS {
+        bar.inc(1);
         system.advance_time(0.00001);
         if n_time % 999 == 0 {
             system.dump_to_sqlite(&conn);
         }
     }
+    bar.finish();
     system.to_json(&"/home/msenger/Desktop/system.json");
 }
