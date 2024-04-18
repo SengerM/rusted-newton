@@ -44,7 +44,8 @@ fn main() {
                     geometric_objects::Sphere::<units::Position> {
                         center: Vector3D::<f64,units::Position>::new(0.,0.,0.),
                         radius: 1.,
-                    }
+                    },
+                    0.5,
                 )
             )
         );
@@ -56,7 +57,7 @@ fn main() {
                 Interaction::force_between_two_particles(
                     n_particle,
                     m_particle,
-                    Force::Sticky(0.2,0.21,10.,99.),
+                    Force::Sticky(0.2,0.31,10.,99.),
                 )
             );
         }

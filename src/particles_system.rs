@@ -110,29 +110,33 @@ pub enum Constraint {
 #[derive(Serialize, Deserialize)]
 #[derive(Debug)]
 pub enum ExternalConstraint {
-    infinite_wall(geometric_objects::Plane<units::Position>),
-    spherical_container(geometric_objects::Sphere<units::Position>),
+    infinite_wall(geometric_objects::Plane<units::Position>, f64),
+    spherical_container(geometric_objects::Sphere<units::Position>, f64),
 }
 
 impl ExternalConstraint {
     fn compute_new_dynamical_variables(&self, particle: &Particle) -> (Vector3D<f64,units::Position>, Vector3D<f64,units::Velocity>) {
         match self {
-            ExternalConstraint::infinite_wall(wall) => {
+            ExternalConstraint::infinite_wall(wall, dissipation_factor) => {
                 let d = (particle.position - wall.position).dot(wall.normal);
                 if d < 0. {
                     let new_vel: Vector3D<f64,units::Velocity> = particle.velocity - (wall.normal.normalize()*2.0*(particle.velocity.dot(wall.normal.normalize().cast_unit()))).cast_unit();
-                    (particle.position, new_vel)
+                    let new_vel = new_vel*f64::sqrt(*dissipation_factor);
+                    let new_pos = particle.position;
+                    (new_pos, new_vel)
                 } else {
                     (particle.position, particle.velocity)
                 }
             }
-            ExternalConstraint::spherical_container(sphere) => {
+            ExternalConstraint::spherical_container(sphere, dissipation_factor) => {
                 if sphere.is_inside(&particle.position) {
                     (particle.position, particle.velocity)
                 } else {
                     let radial_direction = particle.position - sphere.center;
                     let new_vel: Vector3D<f64,units::Velocity> = particle.velocity - particle.velocity.project_onto_vector(radial_direction.cast_unit())*2.;
-                    (particle.position, new_vel)
+                    let new_vel = new_vel*f64::sqrt(*dissipation_factor); // Energy exchange with the walls.
+                    let new_pos = sphere.center + (particle.position-sphere.center)*(1.-1e-6); // If the particle went outside the container, move it inside again.
+                    (new_pos, new_vel)
                 }
             }
         }
